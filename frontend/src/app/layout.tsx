@@ -26,30 +26,30 @@ export default function RootLayout({
               <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
                 CARBONLENS 360
               </span>
-              <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                SU-02
+              <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                PROD 2050
               </span>
             </div>
           </div>
 
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-300">
-            <a href="#dashboard" className="hover:text-emerald-400 transition-colors">Individual Dashboard</a>
+            <a href="#individual" className="hover:text-emerald-400 transition-colors">Personal Tracker</a>
             <a href="#campus" className="hover:text-emerald-400 transition-colors">Campus Hub</a>
-            <a href="#industrial" className="hover:text-emerald-400 transition-colors">Industrial Sensor Node</a>
+            <a href="#industrial" className="hover:text-emerald-400 transition-colors">Industrial Node</a>
             <a href="#credit" className="hover:text-emerald-400 transition-colors">Credit Readiness</a>
-            <a href="#api-docs" className="hover:text-emerald-400 transition-colors">API & Specs</a>
+            <a href="#methodology" className="hover:text-emerald-400 transition-colors">Methodology</a>
           </nav>
 
           <div className="flex items-center space-x-3">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs text-slate-400 font-mono">FastAPI Backend Active</span>
+            <span className="text-xs text-slate-400 font-mono">Backend API Connected</span>
           </div>
         </header>
         
         <main className="flex-1">{children}</main>
 
         <footer className="border-t border-slate-800/60 bg-slate-950 py-8 px-6 text-center text-slate-500 text-xs">
-          <p>© 2026 CarbonLens 360 • CodeVoyage SU-02 • "From Carbon Footprint to Carbon Credit"</p>
+          <p>© 2026 CarbonLens 360 • Climate Intelligence System • "From Carbon Footprint to Carbon Credit"</p>
         </footer>
       </body>
     </html>
