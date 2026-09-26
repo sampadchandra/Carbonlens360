@@ -1,41 +1,43 @@
-# CarbonLens 360 — Development Status
+# CarbonLens 360 — Development & Implementation Status Matrix
 
-## Project Metadata
-- **Project**: CARBONLENS 360
-- **Tagline**: "From Carbon Footprint to Carbon Credit."
-- **Official Problem**: SU-02 (Carbon Footprint Tracker for Individuals & Campuses)
-- **Hackathon**: CodeVoyage
-- **Status**: IMPLEMENTED / IN-PROGRESS
+**Product Name:** CarbonLens 360  
+**Tagline:** “From Carbon Footprint to Carbon Credit.”  
+**Target Environment:** College Campus Climate & Rewards Operating System  
+**Version:** 1.0.0 (2050 Climate Intelligence Architecture)
 
 ---
 
-## Checkpoint Tracker
+## 1. Feature Implementation Matrix
 
-| Checkpoint | Description | Status | Implemented Components | Verified | Git Commit Hash |
-|------------|-------------|--------|------------------------|----------|-----------------|
-| Checkpoint 0 | Current Project Audit | IMPLEMENTED | Fresh project setup, requirements audit | Verified | Initial |
-| Checkpoint 1 | Project Foundation | IMPLEMENTED | Next.js App Router, FastAPI backend architecture | Verified | - |
-| Checkpoint 2 | Supabase / Database Connection | IMPLEMENTED | PostgreSQL schema, client layer | Verified | - |
-| Checkpoint 3 | Authentication | IMPLEMENTED | Supabase Auth, login, signup, persistent sessions | Verified | - |
-| Checkpoint 4 | Roles and Authorization | IMPLEMENTED | Student, Campus Admin, Industry Manager, Sustainability Admin | Verified | - |
-| Checkpoint 5 | Database + RLS | IMPLEMENTED | PostgreSQL migrations, RLS policies, audit logs | Verified | - |
-| Checkpoint 6 | CRUD + API | IMPLEMENTED | Activities, Projects, Evidence, Challenges CRUD endpoints | Verified | - |
-| Checkpoint 7 | Carbon Engine | IMPLEMENTED | Calculation formulas, Climatiq API proxy with fallback, source traceability | Verified | - |
-| Checkpoint 8 | Individual Dashboard | IMPLEMENTED | Footprint metrics, trends, category breakdown, recommendations | Verified | - |
-| Checkpoint 9 | Campus Dashboard | IMPLEMENTED | Aggregate metrics, Hostel/Dept/Team analytics, campus projects | Verified | - |
-| Checkpoint 10 | Recommendations + Challenges + Leaderboard | IMPLEMENTED | Ranked recommendations, Savings tracker, Hostel/Dept/Team Leaderboards | Verified | - |
-| Checkpoint 11 | Evidence/Proof Layer | IMPLEMENTED | "Why Should I Trust This?", Evidence levels 1-4, Confidence score | Verified | - |
-| Checkpoint 12 | Carbon Project Passport | IMPLEMENTED | Passport view, project baselines, reduction wallet, credit eligibility | Verified | - |
-| Checkpoint 13 | Climatiq + OCR | IMPLEMENTED | Backend Climatiq proxy, Bill OCR data extractor & review editor | Verified | - |
-| Checkpoint 14 | Industrial Node + GHG Intensity | IMPLEMENTED | Telemetry stream, GHG intensity (tCO2e/product unit), IoT node simulator | Verified | - |
-| Checkpoint 15 | Compliance + Readiness | IMPLEMENTED | Compliance meter, target gap, certificate surplus/shortfall estimator | Verified | - |
-| Checkpoint 16 | What-If + ROI | IMPLEMENTED | What-If interactive simulator, financial ROI & payback engine | Verified | - |
-| Checkpoint 17 | Pollution + CleanRoute | IMPLEMENTED | AQI Leaflet Map, Spike alerts, Hotspots, CleanRoute low-exposure router | Verified | - |
-| Checkpoint 18 | Industry Layer | IMPLEMENTED | Industry dashboard, AI Carbon Optimizer, GreenGrade rating | Verified | - |
-| Checkpoint 19 | GreenPoints + Rewards | IMPLEMENTED | Gamified points, streaks, badges, rewards marketplace | Verified | - |
-| Checkpoint 20 | Reports | IMPLEMENTED | Server-side PDF generation, audit-ready export | Verified | - |
-| Checkpoint 21 | Forecasting / Digital Twin | IMPLEMENTED | ML forecast model, lightweight visual digital twin | Verified | - |
-| Checkpoint 22 | Security / Privacy / Audit | IMPLEMENTED | Data isolation, server authorization, privacy consent, audit logging | Verified | - |
-| Checkpoint 23 | Final Testing | IMPLEMENTED | End-to-end acceptance tests, persona validation | Verified | - |
-| Checkpoint 24 | Final UI Polish | IMPLEMENTED | 2050 Futuristic dark/light themes, glowing visual indicators | Verified | - |
-| Checkpoint 25 | Deployment-Ready Release | IMPLEMENTED | Production build, documentation, final git checkpoint | Verified | - |
+| Domain | Feature / Module | Route / Component | API Endpoint | Database Table | Status | Notes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Auth & Roles** | Multi-Role Authentication | `/login`, `/auth` | `/api/auth/me`, `/api/auth/users` | `users`, `profiles` | **IMPLEMENTED** | Supports Student, Teacher, Staff, Team Lead, Campus Admin, Sustainability Admin, Canteen Staff. |
+| **Commute Tracking** | Location Permission Dialog | `/commute` | Client GPS Watch | Browser Geolocation API | **IMPLEMENTED** | Transparent opt-in, non-continuous outside commute sessions. |
+| **Commute Tracking** | Live Camera Travel Proof | `/commute` | Device MediaStream | `travel_evidence`, `travel_trips` | **IMPLEMENTED** | Strictly live camera only via `getUserMedia`, no gallery fallback. |
+| **Commute Tracking** | GPS Telemetry & Distance | `/commute` | `/api/commute/track` | `travel_track_points` | **IMPLEMENTED** | Calculates Haversine distance, speed validation. |
+| **Commute Tracking** | Campus Geofence & Arrival | `/commute` | `/api/commute/end` | `travel_trips` | **IMPLEMENTED** | Verification via 1.5km geofence radius + arrival verification. |
+| **Carbon Engine** | Travel CO2e & Reduction | Backend Engine | `/api/commute/end` | `carbon_calculations` | **IMPLEMENTED** | Compares against baseline car emissions (0.192 kgCO2/km). |
+| **Carbon Engine** | Personal Activity Logging | `/activities` | `/api/activities` (POST/GET/DEL) | `activities`, `emission_factors` | **IMPLEMENTED** | Travel, Electricity, Food, Fuel, Waste with DEFRA/CEA/Climatiq metadata. |
+| **Green Credits** | Wallet & Ledger | `/rewards`, `/dashboard` | `/api/wallet` | `green_credit_wallets`, `green_credit_ledger` | **IMPLEMENTED** | Atomic points accounting (100 credits/kgCO2e saved + verification bonus). |
+| **Campus Rewards** | Reward Catalog | `/rewards` | `/api/rewards/catalog` | `rewards` | **IMPLEMENTED** | ₹10, ₹20 Canteen Discounts, Beverages, Certificates. |
+| **Campus Rewards** | Signed 90s Reward QR | `/rewards` | `/api/rewards/generate-qr` | `reward_qr_tokens` | **IMPLEMENTED** | Cryptographically signed token with 90-second countdown timer. |
+| **Canteen Scanner** | POS Camera Scanner | `/canteen` | `/api/canteen/scan` | `canteen_redemptions` | **IMPLEMENTED** | Dedicated scanner for Canteen Staff with Approve/Reject actions and atomic deduction. |
+| **Canteen Scanner** | Redemption Receipts | `/canteen` | `/api/canteen/stats` | `canteen_redemptions`, `green_credit_ledger` | **IMPLEMENTED** | Generates unique transaction receipt (e.g. `CL-TXN-XXXX`) & audit trail. |
+| **Engagement** | Challenges & Progress | `/challenges` | `/api/challenges`, `/api/challenges/:id/join` | `challenges`, `challenge_progress` | **IMPLEMENTED** | Real event-driven progress tracking (No-Car Week, Zero Food Waste). |
+| **Engagement** | Campus Leaderboard | `/leaderboard` | `/api/leaderboard` | `leaderboards` | **IMPLEMENTED** | Segmented by Hostels, Departments, and Teams. |
+| **Campus Analytics** | Campus Hub & Transport Split | `/campus` | `/api/dashboard/campus` | `campuses`, `travel_trips` | **IMPLEMENTED** | Interactive breakdown of cycling, bus, walking, motorcycle, and car modes. |
+| **Campus Projects** | Digital Carbon Passports | `/campus` | `/api/projects`, `/api/projects/:id` | `campus_projects`, `project_evidence` | **IMPLEMENTED** | Rooftop Solar, EV Shuttle, Smart HVAC with evidence-confidence scoring. |
+| **Simulation** | What-If Scenario Simulator | `/campus/simulator` | `/api/simulator/calculate` | `what_if_scenarios` | **IMPLEMENTED** | Solar, EV, AC Efficiency, Waste, LED Lighting with ROI and payback calculations. |
+| **Pollution** | Sensor Map & Hotspots | `/pollution` | `/api/pollution/locations`, `/api/pollution/alerts` | `pollution_locations`, `pollution_readings` | **IMPLEMENTED** | Real-time AQI, PM2.5, PM10, NO2, SO2, Ozone sensors. |
+| **Pollution** | CleanRoute Navigator | `/cleanroute` | `/api/cleanroute/calculate` | `clean_routes` | **IMPLEMENTED** | Compares fastest route vs lower-exposure clean route. |
+| **Admin Operations** | Live Database Monitor | `/admin/data` | `/api/admin/data-monitor` | All PostgreSQL tables | **IMPLEMENTED** | Live searchable, filterable table monitor for PostgreSQL records. |
+| **Admin Operations** | User Record Inspector | `/admin/users` | `/api/admin/users`, `/api/admin/users/:id` | `users`, `audit_logs` | **IMPLEMENTED** | Searchable directory with privacy audit logging on individual profile access. |
+| **Trust & Audit** | "Why Should I Trust This?" | Modal across app | `/api/emission-factors` | `emission_factors`, `evidence_metadata` | **IMPLEMENTED** | Full data traceability (formula, source, date, confidence tier). |
+| **Reporting** | PDF Audit Report Generator | In-app download | `/api/reports/pdf` | `campus_reports` | **IMPLEMENTED** | Generates institutional PDF audit summary via ReportLab. |
+
+---
+
+## 2. Quality & Architecture Verification
+- **Zero Dummy Buttons:** Every interactive control triggers an active client state transition or backend API mutation.
+- **Zero Hackathon References:** Clean public standalone product branding for institutional deployment.
+- **Single Source of Truth:** Direct schema mapping to PostgreSQL & Supabase SQL Editor / TablePlus.

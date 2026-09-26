@@ -6,7 +6,11 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "CarbonLens 360 — From Carbon Footprint to Carbon Credit",
-  description: "A unified platform that turns carbon and pollution data into safer choices, measurable savings, verified action and carbon-credit readiness.",
+  description: "Unified College Climate & Rewards Operating System — Measure your campus impact, prove sustainable commute action, earn Green Credits, and redeem canteen benefits.",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -15,42 +19,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col`}>
-        <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-300 flex items-center justify-center font-bold text-slate-950 text-lg shadow-lg shadow-emerald-500/20">
-              C
-            </div>
-            <div>
-              <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-                CARBONLENS 360
-              </span>
-              <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                PROD 2050
-              </span>
-            </div>
-          </div>
-
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-300">
-            <a href="#individual" className="hover:text-emerald-400 transition-colors">Personal Tracker</a>
-            <a href="#campus" className="hover:text-emerald-400 transition-colors">Campus Hub</a>
-            <a href="#industrial" className="hover:text-emerald-400 transition-colors">Industrial Node</a>
-            <a href="#credit" className="hover:text-emerald-400 transition-colors">Credit Readiness</a>
-            <a href="#methodology" className="hover:text-emerald-400 transition-colors">Methodology</a>
-          </nav>
-
-          <div className="flex items-center space-x-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-xs text-slate-400 font-mono">Backend API Connected</span>
-          </div>
-        </header>
-        
-        <main className="flex-1">{children}</main>
-
-        <footer className="border-t border-slate-800/60 bg-slate-950 py-8 px-6 text-center text-slate-500 text-xs">
-          <p>© 2026 CarbonLens 360 • Climate Intelligence System • "From Carbon Footprint to Carbon Credit"</p>
-        </footer>
+    <html lang="en" className="dark scroll-smooth">
+      <body className={`${inter.className} bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col grid-background`}>
+        {children}
       </body>
     </html>
   );
