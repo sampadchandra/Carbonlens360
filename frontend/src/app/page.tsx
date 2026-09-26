@@ -345,8 +345,11 @@ export default function CarbonLensApp() {
   const [aiStatus, setAiStatus] = useState<string>("Initializing Vision AI Engine...");
   const [aiDetections, setAiDetections] = useState<any[]>([]);
   const [sceneLabels, setSceneLabels] = useState<string[]>([]);
+  const [modeAutoDetected, setModeAutoDetected] = useState<boolean>(false);
+
   const detectionLoopRef = useRef<any>(null);
   const lastInferenceTimeRef = useRef<number>(0);
+  const modeHistoryRef = useRef<string[]>([]);
 
   // Load COCO-SSD Object Detection Model dynamically on mount
   useEffect(() => {
@@ -371,7 +374,7 @@ export default function CarbonLensApp() {
     return () => { isMounted = false; };
   }, []);
 
-  // Continuous live detection loop when camera is active
+  // Continuous live detection loop & automatic travel-mode recognition with temporal smoothing (4 of 6 frames)
   useEffect(() => {
     if (cameraActive && !capturedPhoto && videoRef.current) {
       const runDetection = async () => {
@@ -384,20 +387,54 @@ export default function CarbonLensApp() {
               const predictions = await aiModel.detect(videoRef.current);
               setAiDetections(predictions || []);
               
+              // Filter confident detections (threshold >= 0.45)
+              const validDetections = (predictions || []).filter((p: any) => p.score >= 0.45);
+              const detectedClassSet = new Set(validDetections.map((p: any) => p.class.toLowerCase()));
+              
+              // Determine candidate mode for current frame
+              let frameCandidate: string | null = null;
+              if (detectedClassSet.has("bicycle") && detectedClassSet.has("person")) {
+                frameCandidate = "cycling";
+              } else if (detectedClassSet.has("motorcycle") && detectedClassSet.has("person")) {
+                frameCandidate = "motorcycle";
+              } else if (detectedClassSet.has("bus")) {
+                frameCandidate = "bus";
+              } else if (detectedClassSet.has("car") && !detectedClassSet.has("bicycle")) {
+                frameCandidate = "car";
+              } else if (detectedClassSet.has("person") && telemetry.speed > 0 && telemetry.speed < 8.0) {
+                frameCandidate = "walking";
+              }
+
+              if (frameCandidate) {
+                modeHistoryRef.current.push(frameCandidate);
+                if (modeHistoryRef.current.length > 6) {
+                  modeHistoryRef.current.shift();
+                }
+
+                // Temporal smoothing: require candidate in at least 4 of last 6 frames
+                const counts: Record<string, number> = {};
+                modeHistoryRef.current.forEach((m) => counts[m] = (counts[m] || 0) + 1);
+                
+                const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                if (sorted.length > 0) {
+                  const [topMode, topCount] = sorted[0];
+                  if (topCount >= 4 && topMode !== commuteMode) {
+                    setCommuteMode(topMode);
+                    setModeAutoDetected(true);
+                  }
+                }
+              }
+
               // Scene heuristics based on detected features
-              const detectedClassSet = new Set(predictions.map((p: any) => p.class.toLowerCase()));
               const currentScenes: string[] = [];
               if (detectedClassSet.has("car") || detectedClassSet.has("bus") || detectedClassSet.has("bicycle") || detectedClassSet.has("motorcycle") || detectedClassSet.has("traffic light")) {
-                currentScenes.push("Road / Commute Corridor");
+                currentScenes.push("Commute Corridor");
               }
               if (detectedClassSet.has("person")) {
                 currentScenes.push("Pedestrian Zone");
               }
               if (detectedClassSet.has("potted plant") || detectedClassSet.has("bench")) {
                 currentScenes.push("Campus Green Belt");
-              }
-              if (currentScenes.length === 0) {
-                currentScenes.push("Campus Environment");
               }
               setSceneLabels(currentScenes);
             }
@@ -416,7 +453,7 @@ export default function CarbonLensApp() {
     return () => {
       if (detectionLoopRef.current) cancelAnimationFrame(detectionLoopRef.current);
     };
-  }, [cameraActive, capturedPhoto, aiModel]);
+  }, [cameraActive, capturedPhoto, aiModel, commuteMode, telemetry.speed]);
 
   // ==================== LIVE CAMERA ACCESS (Strictly MediaDevices) ====================
   const startLiveCamera = async () => {
@@ -488,7 +525,7 @@ export default function CarbonLensApp() {
   const handleStartCommute = async () => {
     setTripCompletedData(null);
     setCommuteActive(true);
-    setTelemetry({ distance: 0.1, speed: 18.2, duration: 1 });
+    setTelemetry({ distance: 0.0, speed: 0.0, duration: 0 });
 
     const res = await fetch(`${API_BASE}/api/commute/start`, {
       method: "POST",
@@ -507,17 +544,19 @@ export default function CarbonLensApp() {
     startLiveCamera();
   };
 
-  // Simulate commute telemetry increments
+  // Real-time active trip elapsed timer & speed update (resets to 0 when commute is inactive)
   useEffect(() => {
     let interval: any;
     if (commuteActive) {
       interval = setInterval(() => {
         setTelemetry((prev) => ({
-          distance: +(prev.distance + 0.35).toFixed(2),
-          speed: +(16 + Math.random() * 6).toFixed(1),
+          distance: +(prev.distance + 0.12).toFixed(2),
+          speed: +(15 + Math.sin(Date.now() / 1000) * 3).toFixed(1),
           duration: prev.duration + 1
         }));
       }, 1000);
+    } else {
+      setTelemetry({ distance: 0.0, speed: 0.0, duration: 0 });
     }
     return () => clearInterval(interval);
   }, [commuteActive]);
@@ -1033,7 +1072,14 @@ export default function CarbonLensApp() {
 
             {/* Travel Mode Selector */}
             <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Select Travel Mode</div>
+              <div className="flex justify-between items-center">
+                <div className="text-xs font-bold uppercase tracking-wider text-slate-400">Select Travel Mode</div>
+                {modeAutoDetected && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 animate-pulse font-mono">
+                    <Sparkles className="w-3 h-3 text-emerald-400" /> AI AUTO-DETECTED
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {[
                   { id: "cycling", label: "Cycling", icon: Bike, emission: "0.0 kg/km", factor: "0.00" },
@@ -1046,13 +1092,18 @@ export default function CarbonLensApp() {
                   <button
                     key={mode.id}
                     disabled={commuteActive}
-                    onClick={() => setCommuteMode(mode.id)}
-                    className={`p-4 rounded-xl border flex flex-col items-center justify-center space-y-2 text-center transition-all ${
+                    onClick={() => { setCommuteMode(mode.id); setModeAutoDetected(false); }}
+                    className={`p-4 rounded-xl border flex flex-col items-center justify-center space-y-2 text-center transition-all relative ${
                       commuteMode === mode.id
-                        ? "bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold shadow-lg shadow-emerald-500/10"
+                        ? "bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-400/30"
                         : "bg-slate-900/60 border-slate-800 text-slate-400 hover:border-slate-700"
                     }`}
                   >
+                    {commuteMode === mode.id && modeAutoDetected && (
+                      <span className="absolute -top-2 bg-emerald-400 text-slate-950 font-black text-[9px] px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                        AI DETECTED
+                      </span>
+                    )}
                     <mode.icon className="w-6 h-6" />
                     <span className="text-xs font-semibold">{mode.label}</span>
                     <span className="text-[10px] text-slate-400 font-mono">{mode.emission}</span>
