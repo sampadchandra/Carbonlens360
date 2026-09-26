@@ -674,11 +674,27 @@ def end_commute(req: CommuteEndRequest):
     verification_bonus = 20 if (has_photo and geofence_verified) else 0
     earned_credits = int(saved_co2 * 100) + verification_bonus
 
+    # Vision AI object detection verification boost
+    ai_verified = False
+    if req.detected_objects:
+        labels = [obj.get("label", "").lower() for obj in req.detected_objects if isinstance(obj, dict)]
+        if mode == "cycling" and "bicycle" in labels:
+            ai_verified = True
+        elif mode == "motorcycle" and ("motorcycle" in labels or "car" in labels):
+            ai_verified = True
+        elif mode == "bus" and ("bus" in labels or "car" in labels):
+            ai_verified = True
+        elif mode == "car" and "car" in labels:
+            ai_verified = True
+        elif mode in ["walking", "cycling"] and "person" in labels:
+            ai_verified = True
+
     confidence_score = 70
-    if has_photo: confidence_score += 15
+    if has_photo: confidence_score += 10
     if geofence_verified: confidence_score += 10
-    if has_arrival_qr: confidence_score += 5
-    confidence_score = min(98, confidence_score)
+    if ai_verified: confidence_score += 8
+    if has_arrival_qr: confidence_score += 2
+    confidence_score = min(99, confidence_score)
 
     # Update Wallet & Ledger atomically
     if user_id not in DB["wallets"]:

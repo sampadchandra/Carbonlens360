@@ -60,6 +60,8 @@ class CommuteEndRequest(BaseModel):
     end_lng: float = 77.6050
     photo_base64: Optional[str] = None # Live Camera proof
     arrival_qr_token: Optional[str] = None
+    detected_objects: Optional[List[Dict[str, Any]]] = None
+    scene_labels: Optional[List[str]] = None
 
 class CommuteTripResponse(BaseModel):
     id: str
