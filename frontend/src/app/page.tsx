@@ -128,6 +128,118 @@ export default function CarbonLensApp() {
   const [trustModalOpen, setTrustModalOpen] = useState<boolean>(false);
   const [trustModalData, setTrustModalData] = useState<any | null>(null);
 
+  // Auth State (Production Authentication & Modal)
+  const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authForm, setAuthForm] = useState({
+    full_name: "",
+    phone: "",
+    username_or_phone: "",
+    password: "",
+    confirm_password: ""
+  });
+
+  // Load session from localStorage on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem("cl360_user");
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        setCurrentUser(parsed);
+        setActiveRole(parsed.role || "student");
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username_or_phone: authForm.username_or_phone,
+          password: authForm.password
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Login failed");
+      }
+      localStorage.setItem("cl360_user", JSON.stringify(data.user));
+      localStorage.setItem("cl360_token", data.access_token);
+      setCurrentUser(data.user);
+      setActiveRole(data.user.role);
+      setAuthModalOpen(false);
+
+      if (data.user.role === "admin") {
+        setActiveTab("admin-data");
+      } else if (data.user.role === "canteen_staff") {
+        setActiveTab("canteen");
+      } else {
+        setActiveTab("overview");
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Invalid credentials");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignupSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    if (authForm.password !== authForm.confirm_password) {
+      setAuthError("Passwords do not match");
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          full_name: authForm.full_name,
+          phone: authForm.phone,
+          password: authForm.password,
+          confirm_password: authForm.confirm_password
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Signup failed");
+      }
+      localStorage.setItem("cl360_user", JSON.stringify(data.user));
+      localStorage.setItem("cl360_token", data.access_token);
+      setCurrentUser(data.user);
+      setActiveRole(data.user.role);
+      setAuthModalOpen(false);
+      setActiveTab("overview");
+    } catch (err: any) {
+      setAuthError(err.message || "Signup failed");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("cl360_user");
+    localStorage.removeItem("cl360_token");
+    setCurrentUser({
+      id: "guest",
+      email: "guest@carbonlens.io",
+      role: "student",
+      full_name: "Guest User",
+      campus: "CarbonLens University"
+    });
+    setActiveRole("student");
+    setActiveTab("overview");
+  };
+
   // ==================== INITIAL DATA FETCHING ====================
   const fetchAllData = async () => {
     try {
@@ -136,10 +248,12 @@ export default function CarbonLensApp() {
       if (healthRes && healthRes.ok) setBackendHealthy(true);
 
       // 2. Auth user & wallet
-      const authRes = await fetch(`${API_BASE}/api/auth/me?user_id=${currentUser.id}`);
-      if (authRes.ok) {
-        const authData = await authRes.json();
-        setWallet(authData.wallet);
+      if (currentUser.id !== "guest") {
+        const authRes = await fetch(`${API_BASE}/api/auth/me?user_id=${currentUser.id}`);
+        if (authRes.ok) {
+          const authData = await authRes.json();
+          setWallet(authData.wallet);
+        }
       }
 
       // 3. Rewards Catalog & Ledger
@@ -502,24 +616,37 @@ export default function CarbonLensApp() {
           </div>
         </div>
 
-        {/* Global Role Switcher */}
-        <div className="flex items-center space-x-2 bg-slate-900/90 border border-slate-800 rounded-xl p-1 shadow-inner">
-          <span className="text-[11px] font-semibold text-slate-400 pl-2 flex items-center gap-1">
-            <Users className="w-3.5 h-3.5 text-emerald-400" /> Active Role:
-          </span>
-          <select
-            value={activeRole}
-            onChange={(e) => handleRoleChange(e.target.value)}
-            className="bg-slate-950 text-emerald-400 text-xs font-semibold py-1.5 px-3 rounded-lg border border-slate-700/60 focus:outline-none focus:ring-1 focus:ring-emerald-400"
-          >
-            <option value="student">Student (Aarav Sharma)</option>
-            <option value="teacher">Teacher (Prof. Ananya Sen)</option>
-            <option value="staff">Staff (Rajesh Varma)</option>
-            <option value="team_lead">Team Lead (Meera Patel)</option>
-            <option value="campus_admin">Campus Admin (Dr. Priya Ramesh)</option>
-            <option value="sustainability_admin">Sustainability Admin (Dr. Vikram Joshi)</option>
-            <option value="canteen_staff">Canteen Staff (Ramesh Kumar)</option>
-          </select>
+        {/* Authentication Actions */}
+        <div className="flex items-center space-x-2">
+          {currentUser.id !== "guest" ? (
+            <div className="flex items-center space-x-3 bg-slate-900/90 border border-slate-800 rounded-xl px-3 py-1.5 shadow-inner">
+              <div className="text-left">
+                <div className="text-xs font-bold text-slate-200">{currentUser.full_name}</div>
+                <div className="text-[10px] text-emerald-400 capitalize font-mono">{currentUser.role?.replace("_", " ")}</div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => { setAuthMode("login"); setAuthError(null); setAuthModalOpen(true); }}
+                className="px-4 py-1.5 text-xs font-bold rounded-xl bg-slate-900 text-slate-200 border border-slate-700 hover:border-emerald-500/50 hover:text-white transition-all"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => { setAuthMode("signup"); setAuthError(null); setAuthModalOpen(true); }}
+                className="px-4 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 hover:opacity-95 shadow-md shadow-emerald-500/20 transition-all flex items-center gap-1.5"
+              >
+                <Users className="w-3.5 h-3.5" /> Sign Up
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Wallet Pill & Health */}
@@ -612,8 +739,8 @@ export default function CarbonLensApp() {
           </button>
         )}
 
-        {/* Campus Admin & Sustainability Views */}
-        {(activeRole === "campus_admin" || activeRole === "sustainability_admin" || activeRole === "team_lead") && (
+        {/* Campus Admin, Sustainability & System Admin Views */}
+        {(activeRole === "admin" || activeRole === "campus_admin" || activeRole === "sustainability_admin" || activeRole === "team_lead") && (
           <>
             <button
               onClick={() => setActiveTab("campus")}
@@ -639,7 +766,7 @@ export default function CarbonLensApp() {
                 activeTab === "admin-data" ? "bg-purple-500/20 text-purple-300 border border-purple-500/40 font-bold" : "text-slate-400 hover:text-slate-200"
               }`}
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-purple-400" /> Live Data Monitor
+              <FileSpreadsheet className="w-3.5 h-3.5 text-purple-400" /> Live Data Monitor & Admin
             </button>
           </>
         )}
@@ -2001,37 +2128,159 @@ export default function CarbonLensApp() {
         )}
       </main>
 
-      {/* ==================== GLOBAL TRUST MODAL ==================== */}
-      {trustModalOpen && trustModalData && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-panel max-w-lg w-full p-6 rounded-3xl border border-emerald-500/40 glow-emerald space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Shield className="w-4 h-4" /> Data Traceability & Trust
-              </span>
-              <button onClick={() => setTrustModalOpen(false)} className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" />
+      {/* ==================== PRODUCTION AUTH MODAL (LOGIN / SIGNUP) ==================== */}
+      {authModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel max-w-md w-full p-8 rounded-3xl border border-emerald-500/40 glow-emerald space-y-6 animate-fade-in relative">
+            <button
+              onClick={() => setAuthModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-1">
+              <img src="/logo.png" alt="CarbonLens 360" className="h-12 w-12 object-contain mx-auto mb-2" />
+              <h2 className="text-2xl font-black text-white tracking-tight">
+                {authMode === "login" ? "Welcome Back to CarbonLens" : "Create CarbonLens Account"}
+              </h2>
+              <p className="text-xs text-slate-400">
+                {authMode === "login"
+                  ? "Enter your credentials to access your carbon dashboard & rewards"
+                  : "Sign up to track commute emissions, earn Green Credits & canteen discounts"}
+              </p>
+            </div>
+
+            {/* Mode Toggle Tabs */}
+            <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                type="button"
+                onClick={() => { setAuthMode("login"); setAuthError(null); }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  authMode === "login" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Log In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode("signup"); setAuthError(null); }}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  authMode === "signup" ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Sign Up
               </button>
             </div>
 
-            <div className="space-y-1">
-              <h3 className="font-bold text-lg text-white">{trustModalData.category} — {trustModalData.activity_type}</h3>
-              <p className="text-xs text-slate-400 font-mono">Evidence Confidence: {trustModalData.confidence}/100 (High Tier)</p>
-            </div>
+            {authError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
 
-            <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs font-mono">
-              <div>Formula: <strong className="text-emerald-300">{trustModalData.formula}</strong></div>
-              <div>Source: <strong className="text-slate-300">{trustModalData.source}</strong></div>
-              <div>CO2e Saved: <strong className="text-teal-400">{trustModalData.saved} kg</strong></div>
-              <div>Green Credits: <strong className="text-amber-400">+{trustModalData.credits}</strong></div>
-            </div>
+            {/* LOGIN FORM */}
+            {authMode === "login" && (
+              <form onSubmit={handleLoginSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Email or Phone Number</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="student@carbonlens.io or 9876543210"
+                    value={authForm.username_or_phone}
+                    onChange={(e) => setAuthForm({ ...authForm, username_or_phone: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
 
-            <button
-              onClick={() => setTrustModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold hover:bg-slate-700"
-            >
-              Close
-            </button>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={authForm.password}
+                    onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs hover:opacity-95 shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                >
+                  {authLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Log In to Account"}
+                </button>
+              </form>
+            )}
+
+            {/* SIGNUP FORM */}
+            {authMode === "signup" && (
+              <form onSubmit={handleSignupSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Aarav Sharma"
+                    value={authForm.full_name}
+                    onChange={(e) => setAuthForm({ ...authForm, full_name: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="e.g. 9876543210"
+                    value={authForm.phone}
+                    onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="At least 6 characters"
+                    value={authForm.password}
+                    onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Confirm Password</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Re-enter password"
+                    value={authForm.confirm_password}
+                    onChange={(e) => setAuthForm({ ...authForm, confirm_password: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+
+                <div className="text-[10px] text-slate-400 pt-1">
+                  Default assigned role: <strong className="text-emerald-400">Student</strong>. Privacy & consent verified.
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-bold text-xs hover:opacity-95 shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                >
+                  {authLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Complete Registration"}
+                </button>
+              </form>
+            )}
           </div>
         </div>
       )}
