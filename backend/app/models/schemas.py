@@ -27,6 +27,10 @@ class ContentUpdatePayload(BaseModel):
     hero_subtitle: Optional[str] = None
     announcement: Optional[str] = None
 
+class UserBase(BaseModel):
+    email: str
+    role: str = "student" # student, teacher, staff, team_lead, campus_admin, sustainability_admin, canteen_staff
+
 class UserResponse(UserBase):
     id: str
     full_name: str
